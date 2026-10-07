@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>즐거운 숫자 공부와 자동차 정리 놀이 🚗</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Font: Noto Sans KR -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        /* Canvas stroke style */
+        canvas {
+            touch-action: none;
+        }
+        /* Smooth scale animation for popups */
+        .pop-in {
+            animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        /* Pulse for target container */
+        .box-highlight {
+            animation: pulseGlow 1.5s infinite alternate;
+        }
+        @keyframes pulseGlow {
+            0% { border-color: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.3); }
+            100% { border-color: #2563eb; box-shadow: 0 0 25px rgba(37, 99, 235, 0.7); }
+        }
+    </style>
+</head>
+<body class="bg-amber-50 text-slate-800 min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <!-- Header Navbar -->
+    <header class="bg-white border-b-4 border-amber-300 shadow-md p-3 sm:p-4 sticky top-0 z-30">
+        <div class="max-w-6xl mx-auto flex flex-wrap justify-between items-center gap-2">
+            <div class="flex items-center gap-3">
+                <span class="text-3xl sm:text-4xl">🎈</span>
+                <h1 class="text-xl sm:text-3xl font-black text-amber-600 tracking-tight">즐거운 숫자 세기 놀이</h1>
+            </div>
+            
+            <!-- Mode Switch Tabs -->
+            <div class="flex gap-2 bg-amber-100 p-1.5 rounded-2xl border-2 border-amber-200">
+                <button id="tab-learn" onclick="switchTab('learn')" class="px-4 py-2.5 rounded-xl font-bold text-base sm:text-xl transition-all duration-200 bg-amber-500 text-white shadow-md flex items-center gap-2">
+                    <i class="fa-solid fa-pen-line"></i>
+                    <span>숫자 공부하기</span>
+                </button>
+                <button id="tab-game" onclick="switchTab('game')" class="px-4 py-2.5 rounded-xl font-bold text-base sm:text-xl transition-all duration-200 text-amber-800 hover:bg-amber-200 flex items-center gap-2">
+                    <i class="fa-solid fa-car"></i>
+                    <span>자동차 정리하기</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl w-full mx-auto p-3 sm:p-6 flex-grow flex flex-col justify-center">
+
+        <!-- ================= MODE 1: NUMBER LEARNING & TRACING ================= -->
+        <section id="mode-learn" class="space-y-6">
+            <!-- Number Selector Carousel (1-10) -->
+            <div class="bg-white p-4 rounded-3xl shadow-lg border-2 border-amber-200">
+                <p class="text-center text-lg sm:text-xl font-bold text-amber-700 mb-3">
+                    <i class="fa-solid fa-hand-pointer text-amber-500"></i> 학습할 숫자를 눌러보세요!
+                </p>
+                <div id="number-selector" class="flex gap-2 sm:gap-3 overflow-x-auto pb-2 pt-1 px-1 justify-start md:justify-center scrollbar-thin">
+                    <!-- Numbers 1-10 will be dynamically generated here -->
+                </div>
+            </div>
+
+            <!-- Tracing Workspace Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Left: Number Tracing Canvas -->
+                <div class="bg-white p-5 rounded-3xl shadow-xl border-4 border-blue-200 flex flex-col items-center">
+                    <div class="w-full flex justify-between items-center mb-3">
+                        <span class="text-xl font-bold text-blue-600 flex items-center gap-2">
+                            <i class="fa-solid fa-hashtag"></i> 숫자 모양 따라 그리기
+                        </span>
+                        <button onclick="speakCurrentNumber()" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1.5 rounded-xl font-bold text-sm sm:text-base flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-volume-high text-lg"></i> 읽어주기
+                        </button>
+                    </div>
+                    
+                    <div class="relative bg-slate-50 rounded-2xl border-2 border-dashed border-blue-300 shadow-inner overflow-hidden cursor-crosshair">
+                        <canvas id="num-canvas" width="300" height="300" class="block rounded-2xl"></canvas>
+                    </div>
+
+                    <div class="w-full flex gap-3 mt-4">
+                        <button onclick="clearCanvas('num')" class="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 rounded-2xl text-lg shadow-md transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-eraser"></i> 지우기
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right: Korean Word Tracing Canvas -->
+                <div class="bg-white p-5 rounded-3xl shadow-xl border-4 border-emerald-200 flex flex-col items-center">
+                    <div class="w-full flex justify-between items-center mb-3">
+                        <span class="text-xl font-bold text-emerald-600 flex items-center gap-2">
+                            <i class="fa-solid fa-language"></i> 한글 단어 따라 적기
+                        </span>
+                        <span id="korean-text-label" class="text-2xl font-black text-emerald-700">일</span>
+                    </div>
+
+                    <div class="relative bg-slate-50 rounded-2xl border-2 border-dashed border-emerald-300 shadow-inner overflow-hidden cursor-crosshair">
+                        <canvas id="word-canvas" width="300" height="300" class="block rounded-2xl"></canvas>
+                    </div>
+
+                    <div class="w-full flex gap-3 mt-4">
+                        <button onclick="clearCanvas('word')" class="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 rounded-2xl text-lg shadow-md transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-eraser"></i> 지우기
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pen Color Palette -->
+            <div class="bg-white p-4 rounded-2xl shadow-md border-2 border-slate-200 flex items-center justify-center gap-4 flex-wrap">
+                <span class="font-bold text-slate-600">연필 색상:</span>
+                <button onclick="setPenColor('#2563eb')" class="w-10 h-10 rounded-full bg-blue-600 ring-4 ring-offset-2 ring-blue-600 focus:outline-none"></button>
+                <button onclick="setPenColor('#dc2626')" class="w-10 h-10 rounded-full bg-red-600 ring-0 hover:ring-2 ring-red-600 focus:outline-none"></button>
+                <button onclick="setPenColor('#059669')" class="w-10 h-10 rounded-full bg-emerald-600 ring-0 hover:ring-2 ring-emerald-600 focus:outline-none"></button>
+                <button onclick="setPenColor('#7c3aed')" class="w-10 h-10 rounded-full bg-purple-600 ring-0 hover:ring-2 ring-purple-600 focus:outline-none"></button>
+                <button onclick="setPenColor('#1e293b')" class="w-10 h-10 rounded-full bg-slate-800 ring-0 hover:ring-2 ring-slate-800 focus:outline-none"></button>
+            </div>
+        </section>
+
+        <!-- ================= MODE 2: CAR SORTING ACTIVITY ================= -->
+        <section id="mode-game" class="hidden space-y-6">
+            <!-- Game Instruction Bar -->
+            <div class="bg-white p-5 rounded-3xl shadow-xl border-4 border-amber-300 text-center flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-4xl sm:text-5xl">📢</span>
+                    <div class="text-left">
+                        <p class="text-sm font-bold text-slate-500">오늘의 미션</p>
+                        <p class="text-2xl sm:text-3xl font-black text-slate-800">
+                            장난감 정리 통에 자동차를 <span id="target-num-display" class="text-amber-600 text-4xl font-black underline decoration-amber-400">3</span>개 담아주세요!
+                        </p>
+                    </div>
+                </div>
+                <button onclick="speakGameInstruction()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-5 py-3 rounded-2xl text-lg shadow-md transition flex items-center gap-2 shrink-0">
+                    <i class="fa-solid fa-volume-high text-xl"></i>
+                    <span>음성 듣기</span>
+                </button>
+            </div>
+
+            <!-- Activity Workspace: Car Pool and Toy Box -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                
+                <!-- Left: Unsorted Cars Pool (7 Columns in Large Screen) -->
+                <div class="lg:col-span-7 bg-amber-100/70 p-5 rounded-3xl border-3 border-amber-200 shadow-inner min-h-[320px] flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="font-bold text-lg text-amber-800 flex items-center gap-2">
+                                <i class="fa-solid fa-warehouse"></i> 주차장 (자동차를 손으로 끌어서 옮기세요)
+                            </span>
+                            <span id="pool-count" class="bg-amber-200 text-amber-900 px-3 py-1 rounded-full text-sm font-bold">남은 차: 10개</span>
+                        </div>
+                        
+                        <!-- Draggable Toy Cars Zone -->
+                        <div id="car-pool" class="flex flex-wrap gap-4 justify-center items-center p-3 min-h-[220px]">
+                            <!-- Draggable car items generated via JS -->
+                        </div>
+                    </div>
+                    <p class="text-xs text-center text-amber-700/80 font-medium mt-2">💡 자동차를 손가락이나 마우스로 누른 채 상자 안으로 끌어서 놓아주세요.</p>
+                </div>
+
+                <!-- Right: Toy Bin Dropzone (5 Columns in Large Screen) -->
+                <div class="lg:col-span-5 bg-white p-5 rounded-3xl shadow-xl border-4 border-blue-400 flex flex-col justify-between items-center relative box-highlight">
+                    <div class="w-full flex justify-between items-center mb-2">
+                        <span class="font-extrabold text-xl text-blue-700 flex items-center gap-2">
+                            <i class="fa-solid fa-box-open"></i> 장난감 정리 통
+                        </span>
+                        <div class="bg-blue-100 px-4 py-1.5 rounded-2xl border border-blue-300">
+                            <span class="text-sm font-bold text-blue-600">담긴 차: </span>
+                            <span id="box-count" class="text-2xl font-black text-blue-700">0</span>
+                            <span class="text-sm font-bold text-blue-600"> 개</span>
+                        </div>
+                    </div>
+
+                    <!-- Drop Zone Target Area -->
+                    <div id="toy-box" class="w-full bg-blue-50/80 border-4 border-dashed border-blue-300 rounded-2xl min-h-[220px] my-3 p-4 flex flex-wrap gap-3 justify-center items-center transition-all duration-300 relative">
+                        <div id="empty-box-msg" class="text-slate-400 font-bold text-center pointer-events-none">
+                            <i class="fa-solid fa-arrow-down text-3xl mb-2 animate-bounce block text-blue-300"></i>
+                            여기로 자동차를 드래그하세요!
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button onclick="checkAnswer()" class="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-98 text-white font-black text-2xl py-4 rounded-2xl shadow-lg transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-3">
+                        <i class="fa-solid fa-circle-check text-3xl"></i>
+                        <span>다 담았어요! (확인하기)</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Fullscreen Feedback Overlay Modal (For Correct 'O' / Incorrect 'X') -->
+    <div id="feedback-overlay" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex-col items-center justify-center p-4">
+        <!-- Content Box -->
+        <div id="feedback-card" class="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl border-8 border-white pop-in flex flex-col items-center">
+            
+            <!-- Large Feedback Symbol (O or X) -->
+            <div id="feedback-symbol" class="text-9xl font-black mb-4 select-none">
+                ⭕
+            </div>
+
+            <!-- Feedback Title & Message -->
+            <h2 id="feedback-title" class="text-3xl font-black mb-2 text-slate-800">
+                정답입니다!
+            </h2>
+            <p id="feedback-desc" class="text-xl font-bold text-slate-600 mb-6">
+                정말 잘했어요! 참 잘했습니다.
+            </p>
+
+            <!-- Action Button -->
+            <button id="feedback-btn" onclick="closeFeedback()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-2xl py-4 rounded-2xl shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2">
+                <span>다음 문제로 넘어가기</span>
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-amber-200 py-3 text-center text-slate-500 font-medium text-sm mt-6">
+        특수교육 맞춤형 숫자 세기 및 소근육 발달 학습 프로그램 🚗
+    </footer>
+
+    <script>
+        /* ===================================================================
+         * GLOBAL STATE & DATA DEFINITIONS
+         * =================================================================== */
+        const NUM_DATA = [
+            { num: 1, kor: '일', read: '일' },
+            { num: 2, kor: '이', read: '이' },
+            { num: 3, kor: '삼', read: '삼' },
+            { num: 4, kor: '사', read: '사' },
+            { num: 5, kor: '오', read: '오' },
+            { num: 6, kor: '육', read: '육' },
+            { num: 7, kor: '칠', read: '칠' },
+            { num: 8, kor: '팔', read: '팔' },
+            { num: 9, kor: '구', read: '구' },
+            { num: 10, kor: '십', read: '십' }
+        ];
+
+        let currentSelectedNum = 1; // 1 to 10
+        let targetGameNum = 3;      // Target count in game mode
+        let currentPenColor = '#2563eb'; // Default pen color
+        let currentTab = 'learn';   // 'learn' or 'game'
+
+        // Web Audio Context for Sound Effects
+        let audioCtx = null;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        // Play synthesized sound effects
+        function playSound(type) {
+            try {
+                const ctx = getAudioContext();
+                if (!ctx) return;
+
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                if (type === 'correct') {
+                    // High cheerful chime (C5 -> E5 -> G5)
+                    const now = ctx.currentTime;
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+                    osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+                    osc.start(now);
+                    osc.stop(now + 0.6);
+                } else if (type === 'wrong') {
+                    // Low buzz error sound
+                    const now = ctx.currentTime;
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.setValueAtTime(140, now + 0.15);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+                    osc.start(now);
+                    osc.stop(now + 0.4);
+                } else if (type === 'pop') {
+                    // Short soft pop sound for dragging
+                    const now = ctx.currentTime;
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.05);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+                    osc.start(now);
+                    osc.stop(now + 0.06);
+                }
+            } catch (e) {
+                console.log("Audio play error:", e);
+            }
+        }
+
+        // Text-to-Speech Helper
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Stop ongoing speech
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ko-KR';
+                utterance.rate = 0.85; // Slightly slower for clarity
+                utterance.pitch = 1.1;  // Slightly warm high pitch
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        /* ===================================================================
+         * STREAMING_CHUNK:Implementing Canvas Tracing and Drawing Features...
+         * =================================================================== */
+        let numCanvas, numCtx, wordCanvas, wordCtx;
+        let isDrawing = false;
+
+        function initCanvases() {
+            numCanvas = document.getElementById('num-canvas');
+            numCtx = numCanvas.getContext('2d');
+            
+            wordCanvas = document.getElementById('word-canvas');
+            wordCtx = wordCanvas.getContext('2d');
+
+            // Setup Event Listeners for both canvases
+            setupCanvasEvents(numCanvas, numCtx);
+            setupCanvasEvents(wordCanvas, wordCtx);
+
+            // Draw Initial Guide Outlines
+            drawGuideOutlines();
+        }
+
+        function setupCanvasEvents(canvas, ctx) {
+            const startDraw = (e) => {
+                isDrawing = true;
+                const pos = getCanvasPos(canvas, e);
+                ctx.beginPath();
+                ctx.moveTo(pos.x, pos.y);
+            };
+
+            const doDraw = (e) => {
+                if (!isDrawing) return;
+                const pos = getCanvasPos(canvas, e);
+                ctx.strokeStyle = currentPenColor;
+                ctx.lineWidth = 18;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.lineTo(pos.x, pos.y);
+                ctx.stroke();
+            };
+
+            const stopDraw = () => {
+                isDrawing = false;
+            };
+
+            // Pointer Events (Handles touch & mouse smoothly)
+            canvas.addEventListener('pointerdown', startDraw);
+            canvas.addEventListener('pointermove', doDraw);
+            canvas.addEventListener('pointerup', stopDraw);
+            canvas.addEventListener('pointerleave', stopDraw);
+        }
+
+        function getCanvasPos(canvas, event) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: (event.clientX - rect.left) * (canvas.width / rect.width),
+                y: (event.clientY - rect.top) * (canvas.height / rect.height)
+            };
+        }
+
+        function drawGuideOutlines() {
+            // 1. Clear both canvases
+            numCtx.clearRect(0, 0, numCanvas.width, numCanvas.height);
+            wordCtx.clearRect(0, 0, wordCanvas.width, wordCanvas.height);
+
+            const numData = NUM_DATA.find(d => d.num === currentSelectedNum);
+
+            // 2. Draw Digit Guide (Light Grey Dotted Outline)
+            numCtx.save();
+            numCtx.font = 'bold 200px "Noto Sans KR", sans-serif';
+            numCtx.fillStyle = '#e2e8f0';
+            numCtx.textAlign = 'center';
+            numCtx.textBaseline = 'middle';
+            numCtx.fillText(numData.num.toString(), numCanvas.width / 2, numCanvas.height / 2 + 10);
+            
+            // Add stroke guide outline
+            numCtx.strokeStyle = '#cbd5e1';
+            numCtx.lineWidth = 4;
+            numCtx.setLineDash([8, 8]);
+            numCtx.strokeText(numData.num.toString(), numCanvas.width / 2, numCanvas.height / 2 + 10);
+            numCtx.restore();
+
+            // 3. Draw Korean Word Guide
+            wordCtx.save();
+            wordCtx.font = 'bold 160px "Noto Sans KR", sans-serif';
+            wordCtx.fillStyle = '#e2e8f0';
+            wordCtx.textAlign = 'center';
+            wordCtx.textBaseline = 'middle';
+            wordCtx.fillText(numData.kor, wordCanvas.width / 2, wordCanvas.height / 2 + 10);
+            
+            // Stroke guide
+            wordCtx.strokeStyle = '#cbd5e1';
+            wordCtx.lineWidth = 4;
+            wordCtx.setLineDash([8, 8]);
+            wordCtx.strokeText(numData.kor, wordCanvas.width / 2, wordCanvas.height / 2 + 10);
+            wordCtx.restore();
+
+            // Update Label
+            document.getElementById('korean-text-label').innerText = numData.kor;
+        }
+
+        function clearCanvas(type) {
+            playSound('pop');
+            if (type === 'num') {
+                numCtx.clearRect(0, 0, numCanvas.width, numCanvas.height);
+            } else {
+                wordCtx.clearRect(0, 0, wordCanvas.width, wordCanvas.height);
+            }
+            drawGuideOutlines();
+        }
+
+        function setPenColor(color) {
+            currentPenColor = color;
+            playSound('pop');
+            
+            // Highlight active color button visual feedback
+            const buttons = document.querySelectorAll('#mode-learn button[onclick^="setPenColor"]');
+            buttons.forEach(btn => {
+                if (btn.getAttribute('onclick').includes(color)) {
+                    btn.classList.add('ring-4', 'ring-offset-2');
+                } else {
+                    btn.classList.remove('ring-4', 'ring-offset-2');
+                }
+            });
+        }
+
+        function selectNumber(num) {
+            currentSelectedNum = num;
+            playSound('pop');
+            renderNumberSelector();
+            drawGuideOutlines();
+            speakCurrentNumber();
+        }
+
+        function speakCurrentNumber() {
+            const data = NUM_DATA.find(d => d.num === currentSelectedNum);
+            speakText(`숫자 ${data.num}, 한글로 ${data.kor}`);
+        }
+
+        function renderNumberSelector() {
+            const container = document.getElementById('number-selector');
+            container.innerHTML = '';
+
+            NUM_DATA.forEach(item => {
+                const isSelected = item.num === currentSelectedNum;
+                const btn = document.createElement('button');
+                btn.onclick = () => selectNumber(item.num);
+                btn.className = `flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl font-black text-2xl sm:text-3xl transition-all duration-200 shadow-md flex items-center justify-center ${
+                    isSelected 
+                    ? 'bg-amber-500 text-white scale-110 ring-4 ring-amber-300' 
+                    : 'bg-slate-100 hover:bg-amber-100 text-slate-700'
+                }`;
+                btn.innerText = item.num;
+                container.appendChild(btn);
+            });
+        }
+
+        /* ===================================================================
+         * STREAMING_CHUNK:Implementing Toy Car Drag and Drop Game Logic...
+         * =================================================================== */
+        // Car SVG Palette colors
+        const CAR_COLORS = [
+            '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', 
+            '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
+        ];
+
+        let carsState = []; // Track state of 10 cars: { id, inBox }
+
+        function initCarGame() {
+            // Pick a target number between 1 and 10 (or sequential)
+            targetGameNum = Math.floor(Math.random() * 10) + 1;
+            document.getElementById('target-num-display').innerText = targetGameNum;
+
+            // Reset cars (Always provide 10 total cars in the pool)
+            carsState = Array.from({ length: 10 }, (_, i) => ({
+                id: i + 1,
+                inBox: false,
+                color: CAR_COLORS[i % CAR_COLORS.length]
+            }));
+
+            renderCars();
+            speakGameInstruction();
+        }
+
+        function speakGameInstruction() {
+            speakText(`장난감 정리 통에 자동차를 ${targetGameNum}개 담아주세요.`);
+        }
+
+        function renderCars() {
+            const carPool = document.getElementById('car-pool');
+            const toyBox = document.getElementById('toy-box');
+            const emptyMsg = document.getElementById('empty-box-msg');
+
+            carPool.innerHTML = '';
+            // Remove existing cars from box except the placeholder empty msg
+            Array.from(toyBox.children).forEach(child => {
+                if (child.id !== 'empty-box-msg') toyBox.removeChild(child);
+            });
+
+            let boxCount = 0;
+            let poolCount = 0;
+
+            carsState.forEach(car => {
+                const carElem = createCarElement(car);
+
+                if (car.inBox) {
+                    toyBox.appendChild(carElem);
+                    boxCount++;
+                } else {
+                    carPool.appendChild(carElem);
+                    poolCount++;
+                }
+            });
+
+            // Update UI Counters
+            document.getElementById('box-count').innerText = boxCount;
+            document.getElementById('pool-count').innerText = `남은 차: ${poolCount}개`;
+
+            if (boxCount > 0) {
+                emptyMsg.classList.add('hidden');
+            } else {
+                emptyMsg.classList.remove('hidden');
+            }
+        }
+
+        function createCarElement(car) {
+            const div = document.createElement('div');
+            div.className = `w-20 h-16 sm:w-24 sm:h-20 bg-white border-2 border-slate-200 rounded-2xl shadow-md cursor-grab active:cursor-grabbing flex flex-col items-center justify-center p-1 hover:scale-105 transition-transform select-none`;
+            div.dataset.id = car.id;
+
+            // Render SVG Toy Car Icon
+            div.innerHTML = `
+                <svg class="w-12 h-10 sm:w-16 sm:h-12 pointer-events-none" viewBox="0 0 100 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="10" y="25" width="80" height="22" rx="6" fill="${car.color}"/>
+                    <path d="M25 25L35 10H65L75 25H25Z" fill="${car.color}"/>
+                    <circle cx="40" cy="18" r="6" fill="#e0f2fe"/>
+                    <circle cx="60" cy="18" r="6" fill="#e0f2fe"/>
+                    <circle cx="25" cy="48" r="9" fill="#1e293b"/>
+                    <circle cx="25" cy="48" r="4" fill="#94a3b8"/>
+                    <circle cx="75" cy="48" r="9" fill="#1e293b"/>
+                    <circle cx="75" cy="48" r="4" fill="#94a3b8"/>
+                </svg>
+            `;
+
+            // Add Pointer Event Listeners for Touch/Mouse Drag & Drop
+            addDragHandlers(div, car.id);
+
+            return div;
+        }
+
+        function addDragHandlers(elem, carId) {
+            let isDragging = false;
+            let startX, startY;
+            let originalParent;
+
+            const onPointerDown = (e) => {
+                isDragging = true;
+                playSound('pop');
+                elem.setPointerCapture(e.pointerId);
+
+                // Elevate element styling
+                elem.style.zIndex = '1000';
+                elem.style.position = 'fixed';
+                updateDragPosition(e);
+
+                originalParent = elem.parentElement;
+            };
+
+            const onPointerMove = (e) => {
+                if (!isDragging) return;
+                updateDragPosition(e);
+            };
+
+            const updateDragPosition = (e) => {
+                elem.style.left = `${e.clientX - 45}px`;
+                elem.style.top = `${e.clientY - 40}px`;
+            };
+
+            const onPointerUp = (e) => {
+                if (!isDragging) return;
+                isDragging = false;
+                elem.releasePointerCapture(e.pointerId);
+
+                // Reset position styling
+                elem.style.position = 'static';
+                elem.style.zIndex = 'auto';
+
+                // Check Drop Target Collision with Toy Box
+                const toyBox = document.getElementById('toy-box');
+                const boxRect = toyBox.getBoundingClientRect();
+
+                const isInsideBox = (
+                    e.clientX >= boxRect.left &&
+                    e.clientX <= boxRect.right &&
+                    e.clientY >= boxRect.top &&
+                    e.clientY <= boxRect.bottom
+                );
+
+                const carData = carsState.find(c => c.id === carId);
+
+                if (isInsideBox) {
+                    carData.inBox = true;
+                } else {
+                    carData.inBox = false;
+                }
+
+                renderCars();
+            };
+
+            elem.addEventListener('pointerdown', onPointerDown);
+            elem.addEventListener('pointermove', onPointerMove);
+            elem.addEventListener('pointerup', onPointerUp);
+            elem.addEventListener('pointercancel', onPointerUp);
+        }
+
+        /* ===================================================================
+         * STREAMING_CHUNK:Implementing Answer Checking and Feedback Overlay Modals...
+         * =================================================================== */
+        function checkAnswer() {
+            const currentInBoxCount = carsState.filter(c => c.inBox).length;
+            const overlay = document.getElementById('feedback-overlay');
+            const card = document.getElementById('feedback-card');
+            const symbol = document.getElementById('feedback-symbol');
+            const title = document.getElementById('feedback-title');
+            const desc = document.getElementById('feedback-desc');
+            const btn = document.getElementById('feedback-btn');
+
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+
+            if (currentInBoxCount === targetGameNum) {
+                // =============== CORRECT ANSWER (O) ===============
+                playSound('correct');
+                symbol.innerText = '⭕';
+                symbol.className = 'text-9xl font-black mb-2 text-emerald-500 animate-bounce';
+                
+                title.innerText = '정답입니다! 🎉';
+                title.className = 'text-3xl font-black mb-2 text-emerald-600';
+
+                desc.innerText = `참 잘했어요! 자동차 ${targetGameNum}개를 상자에 모두 담았습니다!`;
+                
+                btn.className = 'w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black text-2xl py-4 rounded-2xl shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2';
+                btn.innerHTML = '<span>다음 문제 풀기</span> <i class="fa-solid fa-arrow-right"></i>';
+                btn.onclick = () => {
+                    closeFeedback();
+                    initCarGame(); // Load Next Target
+                };
+
+                speakText(`정답입니다! 참 잘했어요. 자동차 ${targetGameNum}개를 모두 잘 담았습니다.`);
+
+            } else {
+                // =============== INCORRECT ANSWER (X) ===============
+                playSound('wrong');
+                symbol.innerText = '❌';
+                symbol.className = 'text-9xl font-black mb-2 text-rose-500 animate-pulse';
+
+                title.innerText = '다시 한번 해볼까요? 💡';
+                title.className = 'text-3xl font-black mb-2 text-rose-600';
+
+                desc.innerHTML = `지금 상자에는 <span class="text-rose-600 font-black">${currentInBoxCount}개</span>가 있어요.<br/>목표는 <span class="text-blue-600 font-black">${targetGameNum}개</span> 입니다. 다시 도전해보세요!`;
+
+                btn.className = 'w-full bg-rose-500 hover:bg-rose-600 text-white font-black text-2xl py-4 rounded-2xl shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2';
+                btn.innerHTML = '<i class="fa-solid fa-rotate-left"></i> <span>다시 시도하기</span>';
+                btn.onclick = () => {
+                    closeFeedback();
+                };
+
+                speakText(`다시 한번 해볼까요? 자동차 ${targetGameNum}개를 맞춰서 담아보세요.`);
+            }
+        }
+
+        function closeFeedback() {
+            const overlay = document.getElementById('feedback-overlay');
+            overlay.classList.add('hidden');
+            overlay.classList.remove('flex');
+        }
+
+        /* ===================================================================
+         * STREAMING_CHUNK:Navigation Mode Switching Logic...
+         * =================================================================== */
+        function switchTab(tab) {
+            playSound('pop');
+            currentTab = tab;
+
+            const learnTabBtn = document.getElementById('tab-learn');
+            const gameTabBtn = document.getElementById('tab-game');
+            const learnModeSec = document.getElementById('mode-learn');
+            const gameModeSec = document.getElementById('mode-game');
+
+            if (tab === 'learn') {
+                learnTabBtn.className = 'px-4 py-2.5 rounded-xl font-bold text-base sm:text-xl transition-all duration-200 bg-amber-500 text-white shadow-md flex items-center gap-2';
+                gameTabBtn.className = 'px-4 py-2.5 rounded-xl font-bold text-base sm:text-xl transition-all duration-200 text-amber-800 hover:bg-amber-200 flex items-center gap-2';
+                
+                learnModeSec.classList.remove('hidden');
+                gameModeSec.classList.add('hidden');
+
+                // Refresh Canvas Layout
+                drawGuideOutlines();
+            } else {
+                gameTabBtn.className = 'px-4 py-2.5 rounded-xl font-bold text-base sm:text-xl transition-all duration-200 bg-amber-500 text-white shadow-md flex items-center gap-2';
+                learnTabBtn.className = 'px-4 py-2.5 rounded-xl font-bold text-base sm:text-xl transition-all duration-200 text-amber-800 hover:bg-amber-200 flex items-center gap-2';
+
+                learnModeSec.classList.add('hidden');
+                gameModeSec.classList.remove('hidden');
+
+                initCarGame();
+            }
+        }
+
+        window.onload = function() {
+            renderNumberSelector();
+            initCanvases();
+        };
+    </script>
+</body>
+</html>
